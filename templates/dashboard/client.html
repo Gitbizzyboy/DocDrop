@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}{{ client.name }} — DocDrop{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+    <li class="breadcrumb-item active">{{ client.name }}</li>
+  </ol>
+</nav>
+
+<!-- Client header -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+      <div>
+        <h2 class="fw-bold mb-1">{{ client.name }}</h2>
+        {% if client.company %}<p class="text-muted mb-1"><i class="bi bi-building me-1"></i>{{ client.company }}</p>{% endif %}
+        {% if client.email %}<p class="text-muted mb-1"><i class="bi bi-envelope me-1"></i>{{ client.email }}</p>{% endif %}
+        {% if client.notes %}
+          <p class="text-muted small mt-2 mb-0"><i class="bi bi-sticky me-1"></i>{{ client.notes }}</p>
+        {% endif %}
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('clients.edit_client', client_id=client.id) }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-pencil me-1"></i>Edit
+        </a>
+        <form method="POST" action="{{ url_for('clients.delete_client', client_id=client.id) }}"
+              onsubmit="return confirm('Delete {{ client.name }} and ALL their documents? This cannot be undone.')">
+          <button type="submit" class="btn btn-outline-danger btn-sm">
+            <i class="bi bi-trash me-1"></i>Delete Client
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Portal link card -->
+<div class="card border-primary border-2 shadow-sm mb-4">
+  <div class="card-body p-4">
+    <h5 class="fw-bold mb-3"><i class="bi bi-link-45deg text-primary me-2"></i>Client Upload Portal</h5>
+    <p class="text-muted small mb-3">
+      Share this link with {{ client.name }}. They can upload files without creating an account.
+    </p>
+    <div class="input-group">
+      <input type="text" class="form-control font-monospace" id="portalUrl" value="{{ portal_url }}" readonly>
+      <button class="btn btn-primary" onclick="copyPortalLink()" id="copyBtn">
+        <i class="bi bi-clipboard me-1"></i>Copy Link
+      </button>
+    </div>
+    <div class="mt-2 d-flex gap-2 flex-wrap">
+      <a href="{{ portal_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-box-arrow-up-right me-1"></i>Preview Portal
+      </a>
+      <form method="POST" action="{{ url_for('clients.regenerate_token', client_id=client.id) }}"
+            onsubmit="return confirm('Generate a new link? The old link will stop working immediately.')">
+        <button type="submit" class="btn btn-sm btn-outline-warning">
+          <i class="bi bi-arrow-clockwise me-1"></i>Regenerate Link
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Documents -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="fw-bold mb-0">
+    Documents <span class="badge bg-secondary ms-1">{{ documents|length }}</span>
+  </h4>
+  {% if documents %}
+  <a href="{{ url_for('dashboard.download_all', client_id=client.id) }}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-download me-1"></i>Download All (ZIP)
+  </a>
+  {% endif %}
+</div>
+
+{% if documents %}
+<div class="card border-0 shadow-sm">
+  <div class="list-group list-group-flush">
+    {% for doc in documents %}
+    <div class="list-group-item py-3 px-4">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-file-earmark-text fs-5 text-muted"></i>
+          <div>
+            <span class="fw-medium">{{ doc.original_filename }}</span>
+            <div class="text-muted small">
+              {% if doc.document_type %}
+                <span class="badge bg-light text-secondary me-1">{{ doc.document_type | replace('_', ' ') | title }}</span>
+              {% endif %}
+              {% if doc.file_size %}
+                {{ "%.1f"|format(doc.file_size / 1024) }} KB &middot;
+              {% endif %}
+              {{ doc.uploaded_at.strftime('%b %d, %Y at %I:%M %p') }}
+            </div>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          {% if not doc.downloaded_by_bookkeeper %}
+            <span class="badge bg-success">New</span>
+          {% else %}
+            <span class="badge bg-light text-muted">Reviewed</span>
+          {% endif %}
+          <a href="{{ url_for('dashboard.download_document', doc_id=doc.id) }}"
+             class="btn btn-sm btn-primary">
+            <i class="bi bi-download me-1"></i>Download
+          </a>
+          {% if not doc.downloaded_by_bookkeeper %}
+          <form method="POST" action="{{ url_for('dashboard.mark_reviewed', doc_id=doc.id) }}" class="d-inline">
+            <button class="btn btn-sm btn-outline-success">
+              <i class="bi bi-check-lg"></i>
+            </button>
+          </form>
+          {% endif %}
+          <form method="POST" action="{{ url_for('dashboard.delete_document', doc_id=doc.id) }}" class="d-inline"
+                onsubmit="return confirm('Delete this document?')">
+            <button class="btn btn-sm btn-outline-danger">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-inbox" style="font-size:3rem;"></i>
+  <p class="mt-3">No documents yet. Share the portal link above with {{ client.name }}.</p>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyPortalLink() {
+  const url = document.getElementById('portalUrl').value;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copied!';
+    btn.classList.replace('btn-primary', 'btn-success');
+    setTimeout(() => {
+      btn.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy Link';
+      btn.classList.replace('btn-success', 'btn-primary');
+    }, 2000);
+  });
+}
+</script>
+{% endblock %}

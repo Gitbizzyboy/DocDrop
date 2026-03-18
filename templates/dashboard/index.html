@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — DocDrop{% endblock %}
+
+{% block content %}
+
+{% if upgraded %}
+<div class="alert alert-success alert-dismissible fade show">
+  <i class="bi bi-check-circle-fill me-2"></i>
+  <strong>You're on Pro!</strong> All features are now unlocked. Welcome aboard!
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="fw-bold mb-0">Dashboard</h1>
+    <p class="text-muted mb-0">{{ clients|length }} client{{ 's' if clients|length != 1 else '' }}</p>
+  </div>
+  <a href="{{ url_for('clients.add_client') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Add Client
+  </a>
+</div>
+
+<!-- Stats row -->
+{% set total_new = clients | sum(attribute='_new_docs') %}
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="card border-0 shadow-sm text-center p-3">
+      <div class="fs-2 fw-bold text-primary">{{ clients|length }}</div>
+      <div class="text-muted small">Total Clients</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card border-0 shadow-sm text-center p-3">
+      <div class="fs-2 fw-bold text-success">{{ total_new }}</div>
+      <div class="text-muted small">New Documents</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card border-0 shadow-sm text-center p-3">
+      <div class="fs-2 fw-bold text-info">
+        {% set total_docs = namespace(n=0) %}
+        {% for c in clients %}{% set total_docs.n = total_docs.n + c.documents|length %}{% endfor %}
+        {{ total_docs.n }}
+      </div>
+      <div class="text-muted small">Total Documents</div>
+    </div>
+  </div>
+</div>
+
+<!-- Clients -->
+{% if clients %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white border-bottom fw-semibold py-3">
+    <i class="bi bi-people me-2 text-primary"></i>Your Clients
+  </div>
+  <div class="list-group list-group-flush">
+    {% for client in clients %}
+    <a href="{{ url_for('dashboard.client_view', client_id=client.id) }}"
+       class="list-group-item list-group-item-action py-3 px-4">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <span class="fw-semibold">{{ client.name }}</span>
+          {% if client.company %}<span class="text-muted ms-2 small">{{ client.company }}</span>{% endif %}
+        </div>
+        <div class="d-flex align-items-center gap-3">
+          {% if client._new_docs > 0 %}
+            <span class="badge bg-success rounded-pill">
+              {{ client._new_docs }} new
+            </span>
+          {% else %}
+            <span class="text-muted small">{{ client.documents|length }} doc{{ 's' if client.documents|length != 1 else '' }}</span>
+          {% endif %}
+          <i class="bi bi-chevron-right text-muted"></i>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<!-- Empty state -->
+<div class="text-center py-5">
+  <i class="bi bi-people text-muted" style="font-size:4rem;"></i>
+  <h3 class="fw-bold mt-3">No clients yet</h3>
+  <p class="text-muted mb-4">Add your first client to generate their upload portal link.</p>
+  <a href="{{ url_for('clients.add_client') }}" class="btn btn-primary btn-lg">
+    <i class="bi bi-plus-lg me-2"></i>Add Your First Client
+  </a>
+</div>
+{% endif %}
+
+<!-- Recent uploads -->
+{% if recent_docs %}
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white border-bottom fw-semibold py-3">
+    <i class="bi bi-clock-history me-2 text-primary"></i>Recent Uploads
+  </div>
+  <div class="list-group list-group-flush">
+    {% for doc in recent_docs %}
+    <div class="list-group-item py-3 px-4">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <i class="bi bi-file-earmark me-2 text-muted"></i>
+          <span class="fw-medium">{{ doc.original_filename }}</span>
+          <span class="text-muted small ms-2">— {{ doc.client.name }}</span>
+          {% if doc.document_type %}
+            <span class="badge bg-light text-secondary ms-1">{{ doc.document_type | replace('_', ' ') | title }}</span>
+          {% endif %}
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          {% if not doc.downloaded_by_bookkeeper %}
+            <span class="badge bg-success">New</span>
+          {% endif %}
+          <small class="text-muted">{{ doc.uploaded_at.strftime('%b %d, %I:%M %p') }}</small>
+          <a href="{{ url_for('dashboard.download_document', doc_id=doc.id) }}"
+             class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-download"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{% if editing %}Edit {{ client.name }}{% else %}Add Client{% endif %} — DocDrop{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+        {% if editing %}
+          <li class="breadcrumb-item"><a href="{{ url_for('dashboard.client_view', client_id=client.id) }}">{{ client.name }}</a></li>
+          <li class="breadcrumb-item active">Edit</li>
+        {% else %}
+          <li class="breadcrumb-item active">Add Client</li>
+        {% endif %}
+      </ol>
+    </nav>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="fw-bold mb-1">{% if editing %}Edit Client{% else %}Add New Client{% endif %}</h2>
+        <p class="text-muted mb-4">
+          {% if editing %}
+            Update client details below.
+          {% else %}
+            Fill in what you know — only the name is required. A unique upload portal link will be created automatically.
+          {% endif %}
+        </p>
+
+        <form method="POST">
+          <div class="mb-3">
+            <label class="form-label fw-medium">Client Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control form-control-lg"
+                   placeholder="Jane Smith" required autofocus
+                   value="{{ client.name if editing else '' }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-medium">Email <span class="text-muted fw-normal">(optional)</span></label>
+            <input type="email" name="email" class="form-control"
+                   placeholder="jane@example.com"
+                   value="{{ client.email or '' if editing else '' }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-medium">Company <span class="text-muted fw-normal">(optional)</span></label>
+            <input type="text" name="company" class="form-control"
+                   placeholder="Smith Enterprises LLC"
+                   value="{{ client.company or '' if editing else '' }}">
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-medium">Notes <span class="text-muted fw-normal">(optional)</span></label>
+            <textarea name="notes" class="form-control" rows="3"
+                      placeholder="e.g. Monthly bookkeeping client, sends docs on the 5th">{{ client.notes or '' if editing else '' }}</textarea>
+          </div>
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary btn-lg">
+              {% if editing %}
+                <i class="bi bi-check-lg me-2"></i>Save Changes
+              {% else %}
+                <i class="bi bi-person-plus me-2"></i>Add Client & Generate Portal Link
+              {% endif %}
+            </button>
+            <a href="{{ url_for('dashboard.client_view', client_id=client.id) if editing else url_for('dashboard.index') }}"
+               class="btn btn-outline-secondary">
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
