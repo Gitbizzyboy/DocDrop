@@ -133,8 +133,13 @@
 <section class="text-center py-5 bg-primary text-white rounded-3 my-4 px-4">
   <h2 class="fw-bold mb-3">Ready to stop chasing documents?</h2>
   <p class="lead mb-4 opacity-75">Join bookkeepers who've reclaimed hours every week.</p>
-  <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg px-5">
-    Create Your First Portal <i class="bi bi-arrow-right ms-2"></i>
-  </a>
+  <div class="d-flex gap-3 justify-content-center flex-wrap">
+    <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg px-5">
+      Create Your First Portal <i class="bi bi-arrow-right ms-2"></i>
+    </a>
+    <a href="{{ url_for('waitlist.waitlist') }}" class="btn btn-outline-light btn-lg px-4">
+      <i class="bi bi-envelope me-2"></i>Join the Waitlist
+    </a>
+  </div>
 </section>
 {% endblock %}

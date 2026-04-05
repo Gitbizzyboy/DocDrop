@@ -18,6 +18,11 @@ def create_app():
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///docdrop_dev.db")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+        "connect_args": {"connect_timeout": 5},
+    }
 
     upload_folder = os.environ.get("UPLOAD_FOLDER", "static/uploads")
     app.config["UPLOAD_FOLDER"] = upload_folder
@@ -57,12 +62,14 @@ def create_app():
     from routes.clients import clients_bp
     from routes.portal import portal_bp
     from routes.stripe_webhook import stripe_bp
+    from routes.waitlist import waitlist_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(clients_bp)
     app.register_blueprint(portal_bp)
     app.register_blueprint(stripe_bp)
+    app.register_blueprint(waitlist_bp)
 
     # ── Landing / misc routes ─────────────────────────────────────────────────
     from flask import request as flask_request
@@ -116,8 +123,14 @@ def create_app():
         return redirect(req.referrer or url_for("landing"))
 
     # ── DB init ───────────────────────────────────────────────────────────────
-    with app.app_context():
-        db.create_all()
+    # Tables are pre-created; only ensure new tables (e.g. waitlist) are added.
+    try:
+        with app.app_context():
+            from models.waitlist import WaitlistEntry  # noqa: register model
+            WaitlistEntry.__table__.create(db.engine, checkfirst=True)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f'Waitlist table init skipped: {e}')
 
     # Make landing accessible from blueprints via url_for("main.landing") aliases
     app.add_url_rule("/", endpoint="main.landing", view_func=app.view_functions["landing"])
